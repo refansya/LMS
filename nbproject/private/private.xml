@@ -3,36 +3,18 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/Koneksi.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/Main.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmLogin.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmMenuAdmin.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmDataGuru.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmDataSiswa.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmKelas.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmMapel.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmJadwal.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmPengumuman.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmLaporan.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmMenuGuru.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmMateriGuru.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmTugasGuru.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmKuisGuru.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/SoalKuis.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmAbsensiGuru.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmNilaiGuru.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmForumGuru.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmMenuSiswa.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmMateriSiswa.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmTugasSiswa.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmKuisSiswa.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmNilaiSiswa.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmJadwalSiswa.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/FrmForumSiswa.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/RoundedPanel.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/RoundedButton.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/BadgeBulat.java</file>
-            <file>file:/C:/Users/ultro/OneDrive/Documents/NetBeansProjects/LMS_SMPN33/src/AvatarBulat.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/Koneksi.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/Session.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/FrmLogin.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/FrmMenuGuru.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/FrmMenuSiswa.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/RoundedPanel.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/FrmMenuAdmin.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/FrmDataGuru.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/UI.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/FrmMapel.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/FrmKelas.java</file>
+            <file>file:/C:/Users/ThinkPad/Documents/NetBeansProjects/lms_smpn33/src/lms/FrmDataSiswa.java</file>
         </group>
     </open-files>
 </project-private>
