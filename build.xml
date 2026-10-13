@@ -7,8 +7,13 @@
 <!-- the Compile on Save feature is turned off for the project. -->
 <!-- You can turn off the Compile on Save (or Deploy on Save) setting -->
 <!-- in the project's Project Properties dialog box.-->
+<<<<<<< HEAD
 <project name="lms" default="default" basedir=".">
     <description>Builds, tests, and runs the project lms.</description>
+=======
+<project name="LMS_SMPN33" default="default" basedir=".">
+    <description>Builds, tests, and runs the project LMS_SMPN33.</description>
+>>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
     <import file="nbproject/build-impl.xml"/>
     <!--
 
@@ -58,7 +63,11 @@
 
     An example of overriding the target for project execution could look like this:
 
+<<<<<<< HEAD
         <target name="run" depends="lms-impl.jar">
+=======
+        <target name="run" depends="LMS_SMPN33-impl.jar">
+>>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
             <exec dir="bin" executable="launcher.exe">
                 <arg file="${dist.jar}"/>
             </exec>

@@ -171,7 +171,12 @@ public class FrmMenuAdmin extends javax.swing.JFrame {
 
         // Badge Notifikasi Angka Merah di atas tombol Pengumuman
         // (Asumsi BadgeBulat adalah JLabel bulat merah)
+<<<<<<< HEAD
         badgePengumuman = new BadgeBulat("5", new Color(233, 69, 96));
+=======
+        badgePengumuman = new BadgeBulat(new Color(233, 69, 96));
+        badgePengumuman.setText("5");
+>>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         badgePengumuman.setBounds(190, 447, 20, 20);
         sidebarPanel.add(badgePengumuman);
         sidebarPanel.setComponentZOrder(badgePengumuman, 0); // Menaruh badge di paling depan
