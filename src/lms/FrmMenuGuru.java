@@ -10,6 +10,10 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class FrmMenuGuru extends javax.swing.JFrame {
 
@@ -29,6 +33,24 @@ public class FrmMenuGuru extends javax.swing.JFrame {
 
     public FrmMenuGuru() {
         initComponentsCustom();
+    }
+    
+    private int hitungBelumDinilai() {
+        if (Session.idGuru == 0) return 0;
+        try (Connection con = Koneksi.getKoneksi()) {
+            if (con == null) return 0;
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT COUNT(*) FROM tb_pengumpulan p JOIN tb_tugas t ON p.id_tugas = t.id_tugas "
+                  + "WHERE t.id_guru = ? AND p.status = 'Belum Dinilai'")) {
+                ps.setInt(1, Session.idGuru);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next() ? rs.getInt(1) : 0;
+                }
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return 0;
+        }
     }
 
     private void initComponentsCustom() {
@@ -101,7 +123,9 @@ public class FrmMenuGuru extends javax.swing.JFrame {
         sidebarPanel.add(btnTugas);
 
         // Badge Bulat Notifikasi Tugas Masuk (Menunjukkan ada 5 tugas baru belum dinilai)
-        badgeTugas = new BadgeBulat("5", new Color(231, 76, 60));
+        int belumDinilai = hitungBelumDinilai();
+        badgeTugas = new BadgeBulat(String.valueOf(belumDinilai), new Color(231, 76, 60));
+        badgeTugas.setVisible(belumDinilai > 0);
         badgeTugas.setFont(new Font("Segoe UI", Font.BOLD, 11));
         badgeTugas.setBounds(190, 295, 24, 24);
         sidebarPanel.add(badgeTugas);
@@ -217,7 +241,10 @@ public class FrmMenuGuru extends javax.swing.JFrame {
         lblCardNilaiTitle.setBounds(20, 20, 250, 25);
         cardPenilaian.add(lblCardNilaiTitle);
 
-        lblCardNilaiDesc = new JLabel("<html>Ada total <b>5 tugas</b> pengumpulan baru dari siswa kelas VIII-A yang perlu segera Anda periksa dan beri penilaian akademik.</html>");
+        lblCardNilaiDesc = new JLabel(belumDinilai > 0
+            ? "<html>Ada total <b>" + belumDinilai + " pengumpulan tugas</b> dari siswa yang perlu segera "
+              + "Anda periksa dan beri penilaian akademik.</html>"
+            : "<html>Semua pengumpulan tugas sudah dinilai.</html>");
         lblCardNilaiDesc.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lblCardNilaiDesc.setForeground(Color.DARK_GRAY);
         lblCardNilaiDesc.setBounds(20, 55, 280, 100);

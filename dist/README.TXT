@@ -11,11 +11,7 @@ JAR files manifest file (MANIFEST.MF).
 To run the project from the command line, go to the dist folder and
 type the following:
 
-<<<<<<< HEAD
 java -jar "lms.jar" 
-=======
-java -jar "LMS_SMPN33.jar" 
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
 
 To distribute this project, zip up the dist folder (including the lib folder)
 and distribute the ZIP file.

@@ -3,11 +3,7 @@
     <type>org.netbeans.modules.java.j2seproject</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/j2se-project/3">
-<<<<<<< HEAD
             <name>lms</name>
-=======
-            <name>LMS_SMPN33</name>
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
             <source-roots>
                 <root id="src.dir"/>
             </source-roots>
