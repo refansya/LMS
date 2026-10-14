@@ -16,6 +16,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.DocumentEvent;
@@ -54,8 +55,16 @@ public class UI {
     //  KERANGKA HALAMAN
     // ------------------------------------------------------------------
 
-    /** Menyiapkan JFrame 1000x650 + background gradasi + judul + tombol KEMBALI (ke menu admin). */
+    /** Versi untuk form admin: tombol KEMBALI membuka FrmMenuAdmin. */
     public static JPanel siapkanFrame(JFrame f, String judulJendela, String judulHeader) {
+        return siapkanFrame(f, judulJendela, judulHeader, () -> new FrmMenuAdmin().setVisible(true));
+    }
+
+    /**
+     * Menyiapkan JFrame 1000x650 + background gradasi + judul + tombol KEMBALI.
+     * @param kembali aksi yang dijalankan saat KEMBALI diklik (buka menu asal); jendela ini lalu ditutup.
+     */
+    public static JPanel siapkanFrame(JFrame f, String judulJendela, String judulHeader, Runnable kembali) {
         f.setTitle("LMS UPTD SMPN 33 Depok - " + judulJendela);
         f.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         f.setResizable(false);
@@ -84,7 +93,7 @@ public class UI {
         bg.add(h);
 
         tombol(bg, "KEMBALI", new Color(108, 117, 125), new Color(198, 40, 40), 840, 25, 110, 35, () -> {
-            new FrmMenuAdmin().setVisible(true);
+            kembali.run();
             f.dispose();
         });
         return bg;
@@ -169,7 +178,24 @@ public class UI {
         return b;
     }
 
+    /** Label + area teks beberapa baris (dengan scroll). Mengembalikan JTextArea-nya. */
+    public static JTextArea area(JPanel p, String teksLabel, int y, int tinggi) {
+        label(p, teksLabel, y);
+        JTextArea a = new JTextArea();
+        a.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        a.setLineWrap(true);
+        a.setWrapStyleWord(true);
+        a.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        JScrollPane sp = new JScrollPane(a);
+        sp.setBounds(25, y + 17, 300, tinggi);
+        sp.setBorder(BorderFactory.createLineBorder(new Color(224, 224, 224), 1));
+        p.add(sp);
+        return a;
+    }
+
+    /** Memilih item combo berdasarkan id. Jika tidak ada, pilih item pertama. */
     public static void pilihItem(JComboBox<Item> cb, int id) {
+        if (cb.getItemCount() == 0) return;
         cb.setSelectedIndex(0);
         for (int i = 0; i < cb.getItemCount(); i++) {
             if (cb.getItemAt(i).id == id) {
