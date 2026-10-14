@@ -38,7 +38,7 @@ public class FrmMenuSiswa extends javax.swing.JFrame {
     private void initComponentsCustom() {
         setTitle("LMS UPTD SMPN 33 Depok - Dashboard Siswa");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1000, 650);
+        setResizable(false); getContentPane().setPreferredSize(new java.awt.Dimension(1000, 650)); pack();
         setLocationRelativeTo(null);
         setResizable(false);
         getContentPane().setLayout(null);
@@ -68,29 +68,17 @@ public class FrmMenuSiswa extends javax.swing.JFrame {
         bgPanel.add(sidebarPanel);
 
         // Avatar Bulat (Foto Profil inisial "AR" untuk Ahmad Rizki)
-<<<<<<< HEAD
         profilAvatar = new AvatarBulat(Session.inisial(), new Color(46, 204, 113));
         profilAvatar.setBounds(90, 45, 100, 100);
         sidebarPanel.add(profilAvatar);
 
         lblNamaSiswa = new JLabel(Session.namaLengkap, JLabel.CENTER);
-=======
-        profilAvatar = new AvatarBulat("AP", new Color(46, 204, 113));
-        profilAvatar.setBounds(90, 45, 100, 100);
-        sidebarPanel.add(profilAvatar);
-
-        lblNamaSiswa = new JLabel("Andi Pratama", JLabel.CENTER);
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         lblNamaSiswa.setFont(new Font("Segoe UI", Font.BOLD, 16));
         lblNamaSiswa.setForeground(Color.WHITE);
         lblNamaSiswa.setBounds(15, 160, 250, 25);
         sidebarPanel.add(lblNamaSiswa);
 
-<<<<<<< HEAD
         lblNisSiswa = new JLabel("NIS. " + Session.nis, JLabel.CENTER);
-=======
-        lblNisSiswa = new JLabel("NIS. 10118021", JLabel.CENTER);
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         lblNisSiswa.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblNisSiswa.setForeground(new Color(180, 180, 200));
         lblNisSiswa.setBounds(15, 185, 250, 20);
@@ -112,10 +100,7 @@ public class FrmMenuSiswa extends javax.swing.JFrame {
         badgeTugasAktif = new BadgeBulat("2", new Color(231, 76, 60));
         badgeTugasAktif.setBounds(210, 250, 25, 25);
         sidebarPanel.add(badgeTugasAktif);
-<<<<<<< HEAD
         sidebarPanel.setComponentZOrder(badgeTugasAktif, 0);
-=======
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
 
         // Menu Kuis (Ada Badge Bulat "1")
         btnMenuKuis = new RoundedButton("KUIS SAYA", 10, new Color(26, 26, 46), new Color(22, 22, 40));
@@ -131,10 +116,7 @@ public class FrmMenuSiswa extends javax.swing.JFrame {
         badgeKuisAktif = new BadgeBulat("1", new Color(231, 76, 60));
         badgeKuisAktif.setBounds(210, 315, 25, 25);
         sidebarPanel.add(badgeKuisAktif);
-<<<<<<< HEAD
         sidebarPanel.setComponentZOrder(badgeKuisAktif, 0);
-=======
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
 
         // Menu Materi
         btnMenuMateri = new RoundedButton("UNDUH MATERI", 10, new Color(26, 26, 46), new Color(22, 22, 40));
@@ -209,11 +191,7 @@ public class FrmMenuSiswa extends javax.swing.JFrame {
         panelBanner.setLayout(null);
         bgPanel.add(panelBanner);
 
-<<<<<<< HEAD
         lblBannerTitle = new JLabel("Selamat Datang Kembali, " + Session.namaLengkap + "!");
-=======
-        lblBannerTitle = new JLabel("Selamat Datang Kembali, Andi!");
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         lblBannerTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblBannerTitle.setForeground(Color.WHITE);
         lblBannerTitle.setBounds(30, 45, 500, 30);

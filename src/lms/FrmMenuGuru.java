@@ -34,7 +34,7 @@ public class FrmMenuGuru extends javax.swing.JFrame {
     private void initComponentsCustom() {
         setTitle("LMS UPTD SMPN 33 Depok - Portal Guru");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1000, 650);
+        setResizable(false); getContentPane().setPreferredSize(new java.awt.Dimension(1000, 650)); pack();
         setLocationRelativeTo(null);
         setResizable(false);
         getContentPane().setLayout(null);
@@ -58,31 +58,19 @@ public class FrmMenuGuru extends javax.swing.JFrame {
 
         // AvatarBulat profil "Bu Sari"
         // Menggunakan inisial huruf "S" (Default jika belum diset gambar internal)
-<<<<<<< HEAD
         profilAvatar = new AvatarBulat(Session.inisial(), new Color(233, 69, 96));
-=======
-        profilAvatar = new AvatarBulat("S", new Color(233, 69, 96));
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         profilAvatar.setBounds(75, 40, 100, 100);
         sidebarPanel.add(profilAvatar);
 
         // Nama & NIP Guru
-<<<<<<< HEAD
         lblNamaGuru = new JLabel(Session.namaLengkap);
-=======
-        lblNamaGuru = new JLabel("Budi Santoso, M.Pd.");
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         lblNamaGuru.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblNamaGuru.setForeground(Color.WHITE);
         lblNamaGuru.setHorizontalAlignment(SwingConstants.CENTER);
         lblNamaGuru.setBounds(10, 155, 230, 25);
         sidebarPanel.add(lblNamaGuru);
 
-<<<<<<< HEAD
         lblNipGuru = new JLabel("NIP. " + Session.nip);
-=======
-        lblNipGuru = new JLabel("NIP. 198204122009122003");
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         lblNipGuru.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblNipGuru.setForeground(new Color(180, 180, 200));
         lblNipGuru.setHorizontalAlignment(SwingConstants.CENTER);
@@ -117,10 +105,7 @@ public class FrmMenuGuru extends javax.swing.JFrame {
         badgeTugas.setFont(new Font("Segoe UI", Font.BOLD, 11));
         badgeTugas.setBounds(190, 295, 24, 24);
         sidebarPanel.add(badgeTugas);
-<<<<<<< HEAD
         sidebarPanel.setComponentZOrder(badgeTugas, 0);
-=======
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
 
         // Tombol Kuis Online
         btnKuis = new RoundedButton("KUIS ONLINE", 10, new Color(26, 26, 46), new Color(22, 22, 40));
@@ -188,11 +173,7 @@ public class FrmMenuGuru extends javax.swing.JFrame {
         getContentPane().add(mainContentPanel);
 
         // Salam Selamat Datang
-<<<<<<< HEAD
         lblWelcome = new JLabel("Selamat Datang, " + Session.namaLengkap + "!");
-=======
-        lblWelcome = new JLabel("Selamat Datang, Pak Budi!");
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         lblWelcome.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblWelcome.setForeground(new Color(15, 52, 96));
         lblWelcome.setBounds(40, 35, 400, 30);

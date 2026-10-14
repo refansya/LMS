@@ -51,7 +51,7 @@ public class FrmMenuAdmin extends javax.swing.JFrame {
         // --- WINDOW SETTINGS ---
         setTitle("LMS UPTD SMPN 33 Depok - Admin Panel");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1000, 650);
+        setResizable(false); getContentPane().setPreferredSize(new java.awt.Dimension(1000, 650)); pack();
         setLocationRelativeTo(null);
         setResizable(false);
         getContentPane().setLayout(null); // Absolute layout
@@ -171,12 +171,7 @@ public class FrmMenuAdmin extends javax.swing.JFrame {
 
         // Badge Notifikasi Angka Merah di atas tombol Pengumuman
         // (Asumsi BadgeBulat adalah JLabel bulat merah)
-<<<<<<< HEAD
         badgePengumuman = new BadgeBulat("5", new Color(233, 69, 96));
-=======
-        badgePengumuman = new BadgeBulat(new Color(233, 69, 96));
-        badgePengumuman.setText("5");
->>>>>>> b323dc30037ccdf9c2133f5e0b0c6e2675f3a553
         badgePengumuman.setBounds(190, 447, 20, 20);
         sidebarPanel.add(badgePengumuman);
         sidebarPanel.setComponentZOrder(badgePengumuman, 0); // Menaruh badge di paling depan
