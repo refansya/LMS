@@ -1,145 +1,429 @@
 package lms;
 
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.Font;
-import java.awt.GradientPaint;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import javax.swing.BorderFactory;
+import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.table.DefaultTableModel;
 
-public class FrmMateriSiswa extends javax.swing.JFrame {
+/**
+ * Unduh Materi (siswa): daftar materi kelas, buka file, dan simpan salinan ke folder pilihan siswa.
+ */
+public class FrmMateriSiswa extends JFrame {
 
-    private JPanel bgPanel;
-    private JLabel lblHeaderTitle;
-    private RoundedButton btnKembali;
+    private static final String SEMUA_MAPEL = "Semua mata pelajaran";
+    private static final DateTimeFormatter FMT_TGL = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+    private static final DateTimeFormatter FMT_LENGKAP = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
 
-    // --- CARD MATERI 1 (PDF) ---
-    private RoundedPanel cardMateri1;
-    private JLabel lblIcon1, lblTitle1, lblDesc1;
-    private RoundedButton btnDownload1;
+    private static class Materi {
+        int id;
+        String judul, bab, deskripsi, file, mapel, guru;
+        LocalDateTime upload;
 
-    // --- CARD MATERI 2 (VIDEO) ---
-    private RoundedPanel cardMateri2;
-    private JLabel lblIcon2, lblTitle2, lblDesc2;
-    private RoundedButton btnTonton2;
+        boolean baru() {
+            return upload != null && upload.isAfter(LocalDateTime.now().minusDays(7));
+        }
+    }
+
+    private final Map<Integer, Materi> daftar = new LinkedHashMap<>();
+
+    // daftar (kiri)
+    private JTextField txtCari;
+    private JComboBox<String> cmbMapel;
+    private DefaultTableModel model;
+    private JTable tabel;
+    private JLabel lblRingkasan;
+
+    // detail (kanan)
+    private JLabel lblJudul, lblMeta, lblBab, lblUpload, lblFile, lblHint;
+    private JTextArea txtDeskripsi;
+    private RoundedButton btnBuka, btnUnduh;
+
+    private boolean sedangMuat = false;
 
     public FrmMateriSiswa() {
-        initComponentsCustom();
+        initUI();
+        if (Session.idSiswa == 0 || Session.idKelas == 0) {
+            kosongkanDetail();
+            JOptionPane.showMessageDialog(this,
+                "Akun ini belum terhubung dengan data siswa atau belum masuk ke sebuah kelas.\n"
+              + "Minta administrator melengkapinya di menu Data Siswa.",
+                "Data Siswa Tidak Lengkap", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        muatPilihanMapel();
+        muatTabel();
     }
 
-    private void initComponentsCustom() {
-        setTitle("LMS UPTD SMPN 33 Depok - Materi Siswa");
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(950, 550);
-        setLocationRelativeTo(null);
-        setResizable(false);
-        getContentPane().setLayout(null);
+    // ------------------------------------------------------------------
+    //  UI
+    // ------------------------------------------------------------------
+    private void initUI() {
+        JPanel bg = UI.siapkanFrame(this, "Unduh Materi", "UNDUH MATERI",
+            () -> new FrmMenuSiswa().setVisible(true));
 
-        // Background Gradasi Utama
-        bgPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                Graphics2D g2d = (Graphics2D) g;
-                GradientPaint gp = new GradientPaint(0, 0, new Color(26, 26, 46), 0, getHeight(), new Color(15, 52, 96));
-                g2d.setPaint(gp);
-                g2d.fillRect(0, 0, getWidth(), getHeight());
-            }
-        };
-        bgPanel.setBounds(0, 0, 950, 550);
-        bgPanel.setLayout(null);
-        getContentPane().add(bgPanel);
+        // ---------- DAFTAR MATERI (kiri) ----------
+        RoundedPanel panelList = new RoundedPanel(20, Color.WHITE, true);
+        panelList.setBounds(40, 80, 540, 520);
+        panelList.setLayout(null);
+        bg.add(panelList);
 
-        // Header Title
-        lblHeaderTitle = new JLabel("MATERI PEMBELAJARAN");
-        lblHeaderTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        lblHeaderTitle.setForeground(Color.WHITE);
-        lblHeaderTitle.setBounds(40, 25, 400, 30);
-        bgPanel.add(lblHeaderTitle);
+        JLabel judulList = new JLabel("Materi Kelas");
+        judulList.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        judulList.setForeground(UI.DARK);
+        judulList.setBounds(25, 18, 260, 25);
+        panelList.add(judulList);
 
-        // Tombol Kembali
-        btnKembali = new RoundedButton("KEMBALI", 10, new Color(108, 117, 125), new Color(198, 40, 40));
-        btnKembali.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        btnKembali.setForeground(Color.WHITE);
-        btnKembali.setBounds(790, 25, 110, 35);
-        btnKembali.addActionListener(e -> {
-            new FrmMenuSiswa().setVisible(true);
-            this.dispose();
+        model = UI.modelTabel("ID", "No", "Mapel", "Judul Materi", "BAB", "Diunggah");
+        tabel = UI.tabel(model);
+        tabel.getColumnModel().getColumn(0).setPreferredWidth(32);
+        tabel.getColumnModel().getColumn(1).setPreferredWidth(125);
+        tabel.getColumnModel().getColumn(2).setPreferredWidth(170);
+        tabel.getColumnModel().getColumn(3).setPreferredWidth(70);
+        tabel.getColumnModel().getColumn(4).setPreferredWidth(93);
+        UI.tambahTabel(panelList, tabel);
+        txtCari = UI.kolomCari(panelList, this::muatTabel);
+
+        cmbMapel = new JComboBox<>(new String[]{SEMUA_MAPEL});
+        cmbMapel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        cmbMapel.setBackground(Color.WHITE);
+        cmbMapel.setBounds(25, 455, 210, 28);
+        cmbMapel.addActionListener(e -> { if (!sedangMuat) muatTabel(); });
+        panelList.add(cmbMapel);
+
+        lblRingkasan = new JLabel("", SwingConstants.RIGHT);
+        lblRingkasan.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblRingkasan.setForeground(Color.GRAY);
+        lblRingkasan.setBounds(245, 455, 270, 28);
+        panelList.add(lblRingkasan);
+
+        // ---------- DETAIL MATERI (kanan) ----------
+        RoundedPanel panelDetail = new RoundedPanel(20, Color.WHITE, true);
+        panelDetail.setBounds(600, 80, 350, 520);
+        panelDetail.setLayout(null);
+        bg.add(panelDetail);
+
+        UI.judulForm(panelDetail, "Detail Materi");
+
+        lblJudul = new JLabel();
+        lblJudul.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblJudul.setForeground(UI.NAVY);
+        lblJudul.setVerticalAlignment(SwingConstants.TOP);
+        lblJudul.setBounds(25, 48, 300, 42);
+        panelDetail.add(lblJudul);
+
+        lblMeta = new JLabel();
+        lblMeta.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblMeta.setForeground(Color.GRAY);
+        lblMeta.setBounds(25, 92, 300, 18);
+        panelDetail.add(lblMeta);
+
+        lblBab = new JLabel();
+        lblBab.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblBab.setForeground(UI.DARK);
+        lblBab.setBounds(25, 114, 300, 18);
+        panelDetail.add(lblBab);
+
+        lblUpload = new JLabel();
+        lblUpload.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblUpload.setForeground(UI.DARK);
+        lblUpload.setBounds(25, 132, 300, 18);
+        panelDetail.add(lblUpload);
+
+        UI.label(panelDetail, "Deskripsi", 160);
+        txtDeskripsi = new JTextArea();
+        txtDeskripsi.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        txtDeskripsi.setEditable(false);
+        txtDeskripsi.setLineWrap(true);
+        txtDeskripsi.setWrapStyleWord(true);
+        txtDeskripsi.setBorder(BorderFactory.createEmptyBorder(3, 6, 3, 6));
+        JScrollPane spDesk = new JScrollPane(txtDeskripsi);
+        spDesk.setBounds(25, 177, 300, 110);
+        spDesk.setBorder(BorderFactory.createLineBorder(new Color(224, 224, 224), 1));
+        panelDetail.add(spDesk);
+
+        UI.label(panelDetail, "File Materi", 300);
+        lblFile = new JLabel();
+        lblFile.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblFile.setForeground(Color.DARK_GRAY);
+        lblFile.setVerticalAlignment(SwingConstants.TOP);
+        lblFile.setBounds(25, 319, 300, 62);
+        panelDetail.add(lblFile);
+
+        btnBuka = UI.tombol(panelDetail, "BUKA FILE", new Color(52, 152, 219), new Color(41, 128, 185),
+            25, 395, 145, 45, this::aksiBuka);
+        btnUnduh = UI.tombol(panelDetail, "UNDUH", UI.HIJAU, UI.HIJAU_H,
+            180, 395, 145, 45, this::aksiUnduh);
+
+        lblHint = new JLabel();
+        lblHint.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblHint.setForeground(Color.GRAY);
+        lblHint.setBounds(25, 448, 300, 34);
+        panelDetail.add(lblHint);
+
+        // dipasang paling akhir supaya semua komponen detail sudah ada
+        tabel.getSelectionModel().addListSelectionListener(e -> {
+            if (!sedangMuat && !e.getValueIsAdjusting()) tampilDetail();
         });
-        bgPanel.add(btnKembali);
-
-        // ==========================================
-        // 1. CARD MATERI 1 (PDF - Aljabar)
-        // ==========================================
-        cardMateri1 = new RoundedPanel(15, Color.WHITE, true);
-        cardMateri1.setBounds(40, 90, 410, 240);
-        cardMateri1.setLayout(null);
-        bgPanel.add(cardMateri1);
-
-        lblIcon1 = new JLabel("[PDF]");
-        lblIcon1.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        lblIcon1.setForeground(new Color(231, 76, 60)); // Merah PDF
-        lblIcon1.setBounds(25, 25, 80, 30);
-        cardMateri1.add(lblIcon1);
-
-        lblTitle1 = new JLabel("Bab 1: Konsep Aljabar");
-        lblTitle1.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblTitle1.setForeground(new Color(26, 26, 46));
-        lblTitle1.setBounds(25, 70, 360, 25);
-        cardMateri1.add(lblTitle1);
-
-        lblDesc1 = new JLabel("<html>Dokumen modul belajar konsep dasar variabel, konstanta, dan penyederhanaan fungsi aljabar matematika kelas VIII.</html>");
-        lblDesc1.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblDesc1.setForeground(Color.GRAY);
-        lblDesc1.setBounds(25, 100, 360, 50);
-        cardMateri1.add(lblDesc1);
-
-        btnDownload1 = new RoundedButton("DOWNLOAD PDF", 8, new Color(15, 52, 96), new Color(10, 36, 66));
-        btnDownload1.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        btnDownload1.setForeground(Color.WHITE);
-        btnDownload1.setBounds(25, 175, 160, 40);
-        btnDownload1.addActionListener(e -> JOptionPane.showMessageDialog(this, "Mengunduh file: Bab_1_Konsep_Aljabar.pdf"));
-        cardMateri1.add(btnDownload1);
-
-        // ==========================================
-        // 2. CARD MATERI 2 (VIDEO - Persamaan Linier)
-        // ==========================================
-        cardMateri2 = new RoundedPanel(15, Color.WHITE, true);
-        cardMateri2.setBounds(490, 90, 410, 240);
-        cardMateri2.setLayout(null);
-        bgPanel.add(cardMateri2);
-
-        lblIcon2 = new JLabel("[PLAY]");
-        lblIcon2.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        lblIcon2.setForeground(new Color(46, 204, 113)); // Hijau Video
-        lblIcon2.setBounds(25, 25, 85, 30);
-        cardMateri2.add(lblIcon2);
-
-        lblTitle2 = new JLabel("Video: Persamaan Linier Satu Variabel");
-        lblTitle2.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        lblTitle2.setForeground(new Color(26, 26, 46));
-        lblTitle2.setBounds(25, 70, 360, 25);
-        cardMateri2.add(lblTitle2);
-
-        lblDesc2 = new JLabel("<html>Video penjelasan interaktif penyelesaian persamaan matematika linear satu variabel disertai dengan visualisasi contoh nyata.</html>");
-        lblDesc2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblDesc2.setForeground(Color.GRAY);
-        lblDesc2.setBounds(25, 100, 360, 50);
-        cardMateri2.add(lblDesc2);
-
-        btnTonton2 = new RoundedButton("TONTON VIDEO", 8, new Color(46, 204, 113), new Color(39, 174, 96));
-        btnTonton2.setFont(new Font("Segoe UI", Font.BOLD, 11));
-        btnTonton2.setForeground(Color.WHITE);
-        btnTonton2.setBounds(25, 175, 160, 40);
-        btnTonton2.addActionListener(e -> JOptionPane.showMessageDialog(this, "Membuka video streaming materi kelas VIII..."));
-        cardMateri2.add(btnTonton2);
     }
 
-    private void initComponents() {}
-    public static void main(String args[]) {
+    // ------------------------------------------------------------------
+    //  LOAD DATA
+    // ------------------------------------------------------------------
+    /** Isi combo filter dengan mapel yang benar-benar punya materi di kelas ini. */
+    private void muatPilihanMapel() {
+        List<String> mapel = new ArrayList<>();
+        try (Connection con = Koneksi.getKoneksi()) {
+            if (con == null) return;
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT DISTINCT mp.nama_mapel FROM tb_materi m "
+                  + "JOIN tb_mapel mp ON m.id_mapel = mp.id_mapel "
+                  + "WHERE m.id_kelas = ? ORDER BY mp.nama_mapel")) {
+                ps.setInt(1, Session.idKelas);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) mapel.add(rs.getString(1));
+                }
+            }
+        } catch (SQLException ex) {
+            UI.errorDb(this, ex);
+            return;
+        }
+        sedangMuat = true;
+        for (String m : mapel) cmbMapel.addItem(m);
+        sedangMuat = false;
+    }
+
+    private void muatTabel() {
+        if (Session.idSiswa == 0 || Session.idKelas == 0) return;
+
+        int pilihSebelumnya = UI.idTerpilih(tabel, model);
+        String kata = "%" + txtCari.getText().trim() + "%";
+        String sql = "SELECT m.id_materi, m.judul, m.bab, m.deskripsi, m.file_materi, m.tanggal_upload, "
+                   + "COALESCE(mp.nama_mapel,'-') AS mapel, COALESCE(g.nama_guru,'-') AS guru "
+                   + "FROM tb_materi m "
+                   + "LEFT JOIN tb_mapel mp ON m.id_mapel = mp.id_mapel "
+                   + "LEFT JOIN tb_guru g ON m.id_guru = g.id_guru "
+                   + "WHERE m.id_kelas = ? AND (m.judul LIKE ? OR mp.nama_mapel LIKE ? OR m.bab LIKE ?) "
+                   + "ORDER BY m.tanggal_upload DESC, m.id_materi DESC";
+
+        List<Materi> hasil = new ArrayList<>();
+        try (Connection con = Koneksi.getKoneksi()) {
+            if (con == null) { UI.koneksiGagal(this); return; }
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, Session.idKelas);
+                ps.setString(2, kata);
+                ps.setString(3, kata);
+                ps.setString(4, kata);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        Materi m = new Materi();
+                        m.id = rs.getInt("id_materi");
+                        m.judul = rs.getString("judul");
+                        m.bab = rs.getString("bab");
+                        m.deskripsi = rs.getString("deskripsi");
+                        m.file = rs.getString("file_materi");
+                        Timestamp tu = rs.getTimestamp("tanggal_upload");
+                        m.upload = tu == null ? null : tu.toLocalDateTime();
+                        m.mapel = rs.getString("mapel");
+                        m.guru = rs.getString("guru");
+                        hasil.add(m);
+                    }
+                }
+            }
+        } catch (SQLException ex) {
+            UI.errorDb(this, ex);
+            return;
+        }
+
+        String mapelFilter = cmbMapel.getSelectedItem() == null ? SEMUA_MAPEL : cmbMapel.getSelectedItem().toString();
+
+        daftar.clear();
+        sedangMuat = true;
+        model.setRowCount(0);
+        int no = 1, barisPilih = -1, baru = 0;
+        for (Materi m : hasil) {
+            if (!SEMUA_MAPEL.equals(mapelFilter) && !mapelFilter.equals(m.mapel)) continue;
+            daftar.put(m.id, m);
+            if (m.baru()) baru++;
+            if (m.id == pilihSebelumnya) barisPilih = model.getRowCount();
+            model.addRow(new Object[]{m.id, no++, m.mapel,
+                m.judul + (m.baru() ? "  (BARU)" : ""),
+                m.bab == null || m.bab.isEmpty() ? "-" : m.bab,
+                m.upload == null ? "-" : FMT_TGL.format(m.upload)});
+        }
+        sedangMuat = false;
+
+        lblRingkasan.setText(daftar.size() + " materi" + (baru > 0 ? "  |  " + baru + " baru (7 hari terakhir)" : ""));
+
+        if (barisPilih == -1 && pilihSebelumnya == 0 && model.getRowCount() > 0) barisPilih = 0;
+        if (barisPilih >= 0) {
+            tabel.setRowSelectionInterval(barisPilih, barisPilih); // memicu tampilDetail()
+        } else {
+            kosongkanDetail();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  DETAIL
+    // ------------------------------------------------------------------
+    private void kosongkanDetail() {
+        lblJudul.setText("<html><body style='width:300px'><i>Pilih materi di daftar untuk melihat detailnya.</i></body></html>");
+        lblMeta.setText("");
+        lblBab.setText("");
+        lblUpload.setText("");
+        txtDeskripsi.setText("");
+        lblFile.setText("");
+        lblHint.setText("");
+        btnBuka.setEnabled(false);
+        btnUnduh.setEnabled(false);
+    }
+
+    private void tampilDetail() {
+        Materi m = daftar.get(UI.idTerpilih(tabel, model));
+        if (m == null) { kosongkanDetail(); return; }
+
+        lblJudul.setText("<html><body style='width:300px'>" + esc(m.judul) + "</body></html>");
+        lblMeta.setText(m.mapel + "  \u2022  " + m.guru);
+        lblBab.setText("BAB: " + (m.bab == null || m.bab.isEmpty() ? "-" : m.bab));
+        lblUpload.setText("Diunggah: " + (m.upload == null ? "-" : FMT_LENGKAP.format(m.upload)));
+
+        txtDeskripsi.setText(m.deskripsi == null || m.deskripsi.trim().isEmpty()
+            ? "(Tidak ada deskripsi)" : m.deskripsi);
+        txtDeskripsi.setCaretPosition(0);
+
+        File f = Storage.file(m.file);
+        boolean ada = f != null && f.isFile();
+        if (m.file == null || m.file.isEmpty()) {
+            lblFile.setText("<html><i>Guru tidak melampirkan file untuk materi ini.</i></html>");
+        } else if (!ada) {
+            lblFile.setText("<html><b>" + esc(Storage.namaAsli(m.file)) + "</b><br>"
+                + "<font color='#c0392b'>File tidak ditemukan di folder penyimpanan.</font></html>");
+        } else {
+            lblFile.setText("<html><b>" + esc(Storage.namaAsli(m.file)) + "</b><br>"
+                + Storage.ekstensi(m.file).toUpperCase() + "  \u2022  " + fmtUkuran(f.length()) + "</html>");
+        }
+        btnBuka.setEnabled(ada);
+        btnUnduh.setEnabled(ada);
+
+        if (m.file == null || m.file.isEmpty()) {
+            lblHint.setText("Belum ada file yang bisa dibuka atau diunduh.");
+        } else if (!ada) {
+            lblHint.setText("Hubungi guru atau administrator untuk memeriksa file ini.");
+        } else {
+            lblHint.setText("UNDUH menyimpan salinan file ke folder pilihanmu.");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  AKSI
+    // ------------------------------------------------------------------
+    private Materi materiTerpilih() {
+        Materi m = daftar.get(UI.idTerpilih(tabel, model));
+        if (m == null) JOptionPane.showMessageDialog(this, "Pilih dulu materi di daftar.");
+        return m;
+    }
+
+    private void aksiBuka() {
+        Materi m = materiTerpilih();
+        if (m == null) return;
+        Storage.buka(this, m.file);
+    }
+
+    private void aksiUnduh() {
+        Materi m = materiTerpilih();
+        if (m == null) return;
+
+        File sumber = Storage.file(m.file);
+        if (sumber == null || !sumber.isFile()) {
+            UI.peringatan(this, "File materi tidak ditemukan di folder penyimpanan.");
+            tampilDetail();
+            return;
+        }
+
+        String nama = Storage.namaAsli(m.file);
+        File downloads = new File(System.getProperty("user.home"), "Downloads");
+        JFileChooser fc = new JFileChooser(downloads.isDirectory() ? downloads : new File(System.getProperty("user.home")));
+        fc.setDialogTitle("Simpan materi");
+        fc.setSelectedFile(new File(fc.getCurrentDirectory(), nama));
+        if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
+
+        File tujuan = fc.getSelectedFile();
+        // jaga ekstensi asli supaya file tetap bisa dibuka dengan aplikasi yang tepat
+        String ext = Storage.ekstensi(nama);
+        if (!ext.isEmpty() && Storage.ekstensi(tujuan.getName()).isEmpty()) {
+            tujuan = new File(tujuan.getParentFile(), tujuan.getName() + "." + ext);
+        }
+
+        try {
+            if (tujuan.getCanonicalFile().equals(sumber.getCanonicalFile())) {
+                UI.peringatan(this, "Pilih lokasi lain, tidak bisa menyimpan di atas file sumber.");
+                return;
+            }
+            if (tujuan.exists() && JOptionPane.showConfirmDialog(this,
+                    "File \"" + tujuan.getName() + "\" sudah ada di folder tersebut.\nTimpa?",
+                    "Konfirmasi", JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE) != JOptionPane.YES_OPTION) return;
+
+            Files.copy(sumber.toPath(), tujuan.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Gagal menyimpan file:\n" + ex.getMessage(),
+                "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        int pilih = JOptionPane.showOptionDialog(this,
+            "Materi berhasil diunduh ke:\n" + tujuan.getAbsolutePath(),
+            "Unduh Selesai", JOptionPane.DEFAULT_OPTION, JOptionPane.INFORMATION_MESSAGE, null,
+            new String[]{"Buka Folder", "Tutup"}, "Tutup");
+        if (pilih == 0) {
+            try {
+                Desktop.getDesktop().open(tujuan.getParentFile());
+            } catch (Exception ex) {
+                UI.peringatan(this, "Tidak bisa membuka folder:\n" + tujuan.getParentFile());
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  HELPER
+    // ------------------------------------------------------------------
+    private static String fmtUkuran(long byteCount) {
+        if (byteCount < 1024) return byteCount + " B";
+        if (byteCount < 1024L * 1024) return String.format("%.1f KB", byteCount / 1024.0);
+        return String.format("%.1f MB", byteCount / (1024.0 * 1024));
+    }
+
+    private static String esc(String s) {
+        return s == null ? "" : s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    public static void main(String[] args) {
         java.awt.EventQueue.invokeLater(() -> new FrmMateriSiswa().setVisible(true));
     }
 }
