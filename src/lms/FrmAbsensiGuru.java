@@ -35,10 +35,12 @@ public class FrmAbsensiGuru extends JFrame {
     private JLabel lblInfo, lblRingkasan;
     private DefaultTableModel model;
     private JTable tabel;
-    private RoundedButton btnTampil, btnSemuaHadir, btnSimpan;
+    private RoundedButton btnTampil, btnSemuaHadir, btnSimpan, btnFoto;
 
     // kelas & tanggal yang SEDANG ditampilkan di tabel (bukan isi field saat ini)
     private int kelasMuat = 0;
+    // path foto bukti absen mandiri per id_siswa pada tampilan saat ini
+    private final java.util.Map<Integer, String> fotoSiswa = new java.util.HashMap<>();
     private LocalDate tanggalMuat = null;
 
     public FrmAbsensiGuru() {
@@ -49,6 +51,7 @@ public class FrmAbsensiGuru extends JFrame {
             btnTampil.setEnabled(false);
             btnSemuaHadir.setEnabled(false);
             btnSimpan.setEnabled(false);
+            btnFoto.setEnabled(false);
             JOptionPane.showMessageDialog(this,
                 "Akun ini belum terhubung dengan data guru, jadi belum bisa mengisi presensi.\n"
               + "Minta administrator menambahkan Anda di menu Data Guru.",
@@ -102,9 +105,9 @@ public class FrmAbsensiGuru extends JFrame {
         lblInfo.setBounds(25, 104, 860, 20);
         p.add(lblInfo);
 
-        // kolom model: 0 ID siswa (disembunyikan), 1 No, 2 NIS, 3 Nama, 4 Status, 5 Keterangan
+        // kolom model: 0 ID siswa (disembunyikan), 1 No, 2 NIS, 3 Nama, 4 Status, 5 Keterangan, 6 Bukti
         model = new DefaultTableModel(
-            new String[]{"ID", "No", "NIS", "Nama Siswa", "Status Kehadiran", "Keterangan"}, 0) {
+            new String[]{"ID", "No", "NIS", "Nama Siswa", "Status Kehadiran", "Keterangan", "Bukti"}, 0) {
             @Override public boolean isCellEditable(int row, int column) {
                 return column == 4 || column == 5;
             }
@@ -112,9 +115,10 @@ public class FrmAbsensiGuru extends JFrame {
         tabel = UI.tabel(model); // kolom ID dibuang dari tampilan -> indeks tampilan: 0 No ... 4 Keterangan
         tabel.getColumnModel().getColumn(0).setPreferredWidth(40);
         tabel.getColumnModel().getColumn(1).setPreferredWidth(110);
-        tabel.getColumnModel().getColumn(2).setPreferredWidth(290);
-        tabel.getColumnModel().getColumn(3).setPreferredWidth(140);
-        tabel.getColumnModel().getColumn(4).setPreferredWidth(270);
+        tabel.getColumnModel().getColumn(2).setPreferredWidth(230);
+        tabel.getColumnModel().getColumn(3).setPreferredWidth(130);
+        tabel.getColumnModel().getColumn(4).setPreferredWidth(200);
+        tabel.getColumnModel().getColumn(5).setPreferredWidth(150);
 
         tabel.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(new JComboBox<>(STATUS)));
         tabel.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
@@ -135,6 +139,7 @@ public class FrmAbsensiGuru extends JFrame {
 
         btnSemuaHadir = UI.tombol(p, "SEMUA HADIR", UI.NAVY, new Color(10, 36, 66), 25, 455, 150, 40, this::semuaHadir);
         btnSimpan = UI.tombol(p, "SIMPAN PRESENSI", UI.HIJAU, UI.HIJAU_H, 190, 455, 190, 40, this::simpan);
+        btnFoto = UI.tombol(p, "LIHAT FOTO BUKTI", UI.NAVY, new Color(10, 36, 66), 395, 455, 190, 40, this::lihatFoto);
     }
 
     private void lbl(JPanel p, String teks, int x, int y) {
@@ -222,12 +227,14 @@ public class FrmAbsensiGuru extends JFrame {
 
     private void muatSiswa() {
         model.setRowCount(0);
-        int sudahAda = 0;
+        fotoSiswa.clear();
+        int sudahAda = 0, menunggu = 0;
         try (Connection con = Koneksi.getKoneksi()) {
             if (con == null) { UI.koneksiGagal(this); return; }
             try (PreparedStatement ps = con.prepareStatement(
                     "SELECT s.id_siswa, s.nis, s.nama_siswa, COALESCE(a.status,'Hadir') AS status, "
-                  + "COALESCE(a.keterangan,'') AS ket, (a.id_absensi IS NOT NULL) AS ada "
+                  + "COALESCE(a.keterangan,'') AS ket, (a.id_absensi IS NOT NULL) AS ada, "
+                  + "a.foto, (a.id_absensi IS NOT NULL AND a.diverifikasi = 0) AS menunggu "
                   + "FROM tb_siswa s LEFT JOIN tb_absensi a ON a.id_siswa = s.id_siswa AND a.tanggal = ? "
                   + "WHERE s.id_kelas = ? ORDER BY s.nama_siswa")) {
                 ps.setDate(1, java.sql.Date.valueOf(tanggalMuat));
@@ -236,8 +243,13 @@ public class FrmAbsensiGuru extends JFrame {
                     int no = 1;
                     while (rs.next()) {
                         if (rs.getBoolean("ada")) sudahAda++;
+                        boolean tunggu = rs.getBoolean("menunggu");
+                        if (tunggu) menunggu++;
+                        String foto = rs.getString("foto");
+                        if (foto != null) fotoSiswa.put(rs.getInt("id_siswa"), foto);
                         model.addRow(new Object[]{rs.getInt("id_siswa"), no++, rs.getString("nis"),
-                            rs.getString("nama_siswa"), rs.getString("status"), rs.getString("ket")});
+                            rs.getString("nama_siswa"), rs.getString("status"), rs.getString("ket"),
+                            foto == null ? "-" : (tunggu ? "Foto (menunggu verifikasi)" : "Foto")});
                     }
                 }
             }
@@ -248,6 +260,9 @@ public class FrmAbsensiGuru extends JFrame {
         String tgl = tanggalMuat.format(TGL_TAMPIL);
         if (model.getRowCount() == 0) {
             lblInfo.setText("Kelas ini belum memiliki siswa.");
+        } else if (menunggu > 0) {
+            lblInfo.setText(menunggu + " siswa absen mandiri (dari rumah) dan menunggu verifikasi. "
+                + "Periksa foto buktinya, ubah status bila perlu, lalu simpan untuk menyetujui.");
         } else if (sudahAda > 0) {
             lblInfo.setText("Presensi tanggal " + tgl + " sudah pernah disimpan. Ubah lalu simpan lagi untuk memperbarui.");
         } else {
@@ -280,6 +295,20 @@ public class FrmAbsensiGuru extends JFrame {
         }
     }
 
+    private void lihatFoto() {
+        int id = UI.idTerpilih(tabel, model);
+        if (id == 0) {
+            JOptionPane.showMessageDialog(this, "Pilih dulu siswa di tabel.");
+            return;
+        }
+        String path = fotoSiswa.get(id);
+        if (path == null) {
+            JOptionPane.showMessageDialog(this, "Siswa ini tidak melampirkan foto bukti.");
+            return;
+        }
+        Storage.buka(this, path);
+    }
+
     private void simpan() {
         if (tabel.isEditing()) tabel.getCellEditor().stopCellEditing();
 
@@ -309,7 +338,7 @@ public class FrmAbsensiGuru extends JFrame {
                     "INSERT INTO tb_absensi (id_siswa, id_kelas, id_guru, tanggal, status, keterangan) "
                   + "VALUES (?,?,?,?,?,?) "
                   + "ON DUPLICATE KEY UPDATE status=VALUES(status), keterangan=VALUES(keterangan), "
-                  + "id_guru=VALUES(id_guru)")) {
+                  + "id_guru=VALUES(id_guru), diverifikasi=1")) {
                 for (int i = 0; i < model.getRowCount(); i++) {
                     String ket = teks(model.getValueAt(i, 5));
                     ps.setInt(1, (Integer) model.getValueAt(i, 0));
