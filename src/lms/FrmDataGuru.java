@@ -44,7 +44,7 @@ public class FrmDataGuru extends JFrame {
     private JComboBox<Item> cmbMapel;
     private JTable tabelGuru;
     private DefaultTableModel tableModel;
-    private RoundedButton btnSimpan, btnBatal, btnUbah, btnHapus, btnKembali;
+    private RoundedButton btnSimpan, btnBatal, btnUbah, btnHapus, btnMengajar, btnKembali;
 
     private int idEdit = 0; // 0 = mode tambah, >0 = mode edit (id_guru)
 
@@ -116,7 +116,7 @@ public class FrmDataGuru extends JFrame {
         cmbJk.setBounds(25, 199, 300, 30);
         panelForm.add(cmbJk);
 
-        buatLabel("Mata Pelajaran", 241);
+        buatLabel("Mata Pelajaran Utama", 241);
         cmbMapel = new JComboBox<>();
         cmbMapel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         cmbMapel.setBackground(Color.WHITE);
@@ -169,34 +169,42 @@ public class FrmDataGuru extends JFrame {
         });
         panelTabel.add(txtCari);
 
+        // kolom model: 0 ID, 1 No, 2 NIP, 3 Nama Guru, 4 JK, 5 Mapel yang diajar, 6 Kelas yang diajar
         tableModel = new DefaultTableModel(
-            new String[]{"ID", "No", "NIP", "Nama Guru", "JK", "Mata Pelajaran", "No HP"}, 0) {
+            new String[]{"ID", "No", "NIP", "Nama Guru", "JK", "Mata Pelajaran", "Kelas Diajar"}, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
         tabelGuru = new JTable(tableModel);
         tabelGuru.setRowHeight(24);
         tabelGuru.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tabelGuru.removeColumn(tabelGuru.getColumnModel().getColumn(0)); // sembunyikan kolom ID
-        tabelGuru.getColumnModel().getColumn(0).setPreferredWidth(35);
-        tabelGuru.getColumnModel().getColumn(1).setPreferredWidth(95);
-        tabelGuru.getColumnModel().getColumn(2).setPreferredWidth(150);
-        tabelGuru.getColumnModel().getColumn(3).setPreferredWidth(35);
-        tabelGuru.getColumnModel().getColumn(4).setPreferredWidth(115);
-        tabelGuru.getColumnModel().getColumn(5).setPreferredWidth(90);
+        tabelGuru.getColumnModel().getColumn(0).setPreferredWidth(30);
+        tabelGuru.getColumnModel().getColumn(1).setPreferredWidth(85);
+        tabelGuru.getColumnModel().getColumn(2).setPreferredWidth(130);
+        tabelGuru.getColumnModel().getColumn(3).setPreferredWidth(30);
+        tabelGuru.getColumnModel().getColumn(4).setPreferredWidth(105);
+        tabelGuru.getColumnModel().getColumn(5).setPreferredWidth(110);
 
         JScrollPane sp = new JScrollPane(tabelGuru);
         sp.setBounds(25, 60, 490, 380);
         panelTabel.add(sp);
 
+        btnMengajar = new RoundedButton("ATUR MENGAJAR", 10, new Color(15, 52, 96), new Color(10, 36, 66));
+        btnMengajar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnMengajar.setForeground(Color.WHITE);
+        btnMengajar.setBounds(25, 458, 160, 38);
+        btnMengajar.addActionListener(e -> aksiMengajar());
+        panelTabel.add(btnMengajar);
+
         btnUbah = new RoundedButton("UBAH DATA", 10, new Color(241, 196, 15), new Color(230, 126, 34));
         btnUbah.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnUbah.setBounds(260, 458, 120, 38);
+        btnUbah.setBounds(195, 458, 150, 38);
         btnUbah.addActionListener(e -> aksiUbah());
         panelTabel.add(btnUbah);
 
         btnHapus = new RoundedButton("HAPUS", 10, new Color(231, 76, 60), new Color(192, 41, 43));
         btnHapus.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        btnHapus.setBounds(395, 458, 120, 38);
+        btnHapus.setBounds(355, 458, 160, 38);
         btnHapus.addActionListener(e -> aksiHapus());
         panelTabel.add(btnHapus);
     }
@@ -205,7 +213,7 @@ public class FrmDataGuru extends JFrame {
         JLabel l = new JLabel(teks);
         l.setFont(new Font("Segoe UI", Font.BOLD, 12));
         l.setForeground(new Color(15, 52, 96));
-        l.setBounds(25, y, 300, 18);
+        l.setBounds(25, y, 320, 18);
         panelForm.add(l);
     }
 
@@ -243,8 +251,14 @@ public class FrmDataGuru extends JFrame {
     private void muatTabel() {
         tableModel.setRowCount(0);
         String kata = "%" + txtCari.getText().trim() + "%";
+        // mapel & kelas yang diajar diambil dari penugasan mengajar; jika belum ada, pakai mapel utama
         String sql = "SELECT g.id_guru, g.nip, g.nama_guru, g.jenis_kelamin, "
-                   + "COALESCE(m.nama_mapel,'-') AS mapel, COALESCE(g.no_hp,'-') AS no_hp "
+                   + "COALESCE((SELECT GROUP_CONCAT(DISTINCT mp.nama_mapel ORDER BY mp.nama_mapel SEPARATOR ', ') "
+                   + "FROM tb_guru_mengajar gm JOIN tb_mapel mp ON gm.id_mapel = mp.id_mapel "
+                   + "WHERE gm.id_guru = g.id_guru), m.nama_mapel, '-') AS mapel, "
+                   + "COALESCE((SELECT GROUP_CONCAT(DISTINCT k.nama_kelas ORDER BY k.tingkat, k.nama_kelas SEPARATOR ', ') "
+                   + "FROM tb_guru_mengajar gm JOIN tb_kelas k ON gm.id_kelas = k.id_kelas "
+                   + "WHERE gm.id_guru = g.id_guru), '-') AS kelas "
                    + "FROM tb_guru g LEFT JOIN tb_mapel m ON g.id_mapel = m.id_mapel "
                    + "WHERE g.nama_guru LIKE ? OR g.nip LIKE ? ORDER BY g.nama_guru";
         try (Connection con = Koneksi.getKoneksi()) {
@@ -258,7 +272,7 @@ public class FrmDataGuru extends JFrame {
                         tableModel.addRow(new Object[]{
                             rs.getInt("id_guru"), no++, rs.getString("nip"),
                             rs.getString("nama_guru"), rs.getString("jenis_kelamin"),
-                            rs.getString("mapel"), rs.getString("no_hp")});
+                            rs.getString("mapel"), rs.getString("kelas")});
                     }
                 }
             }
@@ -288,6 +302,17 @@ public class FrmDataGuru extends JFrame {
         btnSimpan.setText("SIMPAN");
         tabelGuru.clearSelection();
         txtNip.requestFocus();
+    }
+
+    private void aksiMengajar() {
+        int id = idTerpilih();
+        if (id == 0) {
+            JOptionPane.showMessageDialog(this, "Pilih dulu guru di tabel untuk mengatur mata pelajaran dan kelas yang diajar.");
+            return;
+        }
+        String nama = tableModel.getValueAt(tabelGuru.convertRowIndexToModel(tabelGuru.getSelectedRow()), 3).toString();
+        new DialogMengajar(this, id, nama).setVisible(true);
+        muatTabel(); // ringkasan mapel & kelas ikut diperbarui
     }
 
     private void aksiUbah() {
@@ -358,6 +383,7 @@ public class FrmDataGuru extends JFrame {
         try (Connection con = Koneksi.getKoneksi()) {
             if (con == null) { pesanKoneksiGagal(); return; }
             con.setAutoCommit(false);
+            boolean baru = (idEdit == 0);
             try {
                 if (idEdit == 0) {
                     // ---- TAMBAH: buat akun login + data guru ----
@@ -384,7 +410,8 @@ public class FrmDataGuru extends JFrame {
                     con.commit();
                     JOptionPane.showMessageDialog(this,
                         "Guru berhasil ditambahkan.\n\nAkun login otomatis dibuat:\n"
-                      + "Username : " + nip + "\nPassword : " + PASSWORD_AWAL);
+                      + "Username : " + nip + "\nPassword : " + PASSWORD_AWAL
+                      + "\n\nSelanjutnya atur mapel dan kelas yang diajar lewat tombol ATUR MENGAJAR.");
                 } else {
                     // ---- UBAH ----
                     try (PreparedStatement ps = con.prepareStatement(
@@ -441,8 +468,8 @@ public class FrmDataGuru extends JFrame {
 
         int konfirmasi = JOptionPane.showConfirmDialog(this,
             "Hapus guru \"" + nama + "\"?\n\n"
-          + "Akun login-nya juga akan dihapus, begitu pula jadwal, materi, tugas,\n"
-          + "kuis, dan nilai yang dibuat guru ini. Wali kelas akan dikosongkan.\n"
+          + "Akun login-nya juga akan dihapus, begitu pula penugasan mengajar, jadwal, materi,\n"
+          + "tugas, kuis, dan nilai yang dibuat guru ini. Wali kelas akan dikosongkan.\n"
           + "Tindakan ini tidak bisa dibatalkan.",
             "Konfirmasi Hapus", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
         if (konfirmasi != JOptionPane.YES_OPTION) return;

@@ -189,34 +189,13 @@ public class FrmForumGuru extends JFrame {
     // ------------------------------------------------------------------
     //  LOAD DATA
     // ------------------------------------------------------------------
-    /** Kelas guru: wali kelas / jadwal / tugas / materi / kuis. Jika belum ada, tampilkan semua kelas. */
+    /** Kelas guru: wali kelas / penugasan mengajar / jadwal / tugas / materi / kuis. Jika belum ada, semua kelas. */
     private void muatKelas() {
         kelasSaya.clear();
         cmbFilter.removeAllItems();
         try (Connection con = Koneksi.getKoneksi()) {
             if (con == null) { UI.koneksiGagal(this); return; }
-            if (Session.idGuru != 0) {
-                try (PreparedStatement ps = con.prepareStatement(
-                        "SELECT k.id_kelas, k.nama_kelas FROM tb_kelas k "
-                      + "WHERE k.id_wali_kelas = ? "
-                      + "OR k.id_kelas IN (SELECT id_kelas FROM tb_jadwal WHERE id_guru = ?) "
-                      + "OR k.id_kelas IN (SELECT id_kelas FROM tb_tugas WHERE id_guru = ?) "
-                      + "OR k.id_kelas IN (SELECT id_kelas FROM tb_materi WHERE id_guru = ?) "
-                      + "OR k.id_kelas IN (SELECT id_kelas FROM tb_kuis WHERE id_guru = ?) "
-                      + "ORDER BY k.tingkat, k.nama_kelas")) {
-                    for (int i = 1; i <= 5; i++) ps.setInt(i, Session.idGuru);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        while (rs.next()) kelasSaya.add(new UI.Item(rs.getInt(1), rs.getString(2)));
-                    }
-                }
-            }
-            if (kelasSaya.isEmpty()) {
-                try (Statement st = con.createStatement();
-                     ResultSet rs = st.executeQuery(
-                         "SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY tingkat, nama_kelas")) {
-                    while (rs.next()) kelasSaya.add(new UI.Item(rs.getInt(1), rs.getString(2)));
-                }
-            }
+            kelasSaya.addAll(Mengajar.kelas(con, Session.idGuru));
         } catch (SQLException ex) {
             UI.errorDb(this, ex);
         }

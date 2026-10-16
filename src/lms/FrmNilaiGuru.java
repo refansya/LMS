@@ -207,49 +207,8 @@ public class FrmNilaiGuru extends JFrame {
     //  LOAD DATA
     // ------------------------------------------------------------------
     private void muatPilihan() {
-        cmbKelas.removeAllItems();
-        cmbMapel.removeAllItems();
-        cmbMapel.addItem(new UI.Item(0, "- Pilih mata pelajaran -"));
-        if (Session.idGuru == 0) return;
-        int mapelGuru = 0;
-        try (Connection con = Koneksi.getKoneksi()) {
-            if (con == null) { UI.koneksiGagal(this); return; }
-
-            // kelas yang berkaitan dengan guru: wali kelas, jadwal, tugas, atau materi
-            try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT k.id_kelas, k.nama_kelas FROM tb_kelas k "
-                  + "WHERE k.id_wali_kelas = ? "
-                  + "OR k.id_kelas IN (SELECT id_kelas FROM tb_jadwal WHERE id_guru = ?) "
-                  + "OR k.id_kelas IN (SELECT id_kelas FROM tb_tugas WHERE id_guru = ?) "
-                  + "OR k.id_kelas IN (SELECT id_kelas FROM tb_materi WHERE id_guru = ?) "
-                  + "ORDER BY k.tingkat, k.nama_kelas")) {
-                for (int i = 1; i <= 4; i++) ps.setInt(i, Session.idGuru);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) cmbKelas.addItem(new UI.Item(rs.getInt(1), rs.getString(2)));
-                }
-            }
-            if (cmbKelas.getItemCount() == 0) { // belum ada keterkaitan -> tampilkan semua kelas
-                try (Statement st = con.createStatement();
-                     ResultSet rs = st.executeQuery(
-                         "SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY tingkat, nama_kelas")) {
-                    while (rs.next()) cmbKelas.addItem(new UI.Item(rs.getInt(1), rs.getString(2)));
-                }
-            }
-
-            try (Statement st = con.createStatement();
-                 ResultSet rs = st.executeQuery("SELECT id_mapel, nama_mapel FROM tb_mapel ORDER BY nama_mapel")) {
-                while (rs.next()) cmbMapel.addItem(new UI.Item(rs.getInt(1), rs.getString(2)));
-            }
-            try (PreparedStatement ps = con.prepareStatement("SELECT id_mapel FROM tb_guru WHERE id_guru=?")) {
-                ps.setInt(1, Session.idGuru);
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) mapelGuru = rs.getInt(1); // 0 jika NULL
-                }
-            }
-        } catch (SQLException ex) {
-            UI.errorDb(this, ex);
-        }
-        UI.pilihItem(cmbMapel, mapelGuru);
+        // kelas milik guru; mapel menyesuaikan kelas yang dipilih (guru bisa mengajar banyak mapel & kelas)
+        Mengajar.pasang(this, cmbKelas, cmbMapel, false);
     }
 
     private void tampilkan() {

@@ -167,29 +167,13 @@ public class FrmAbsensiGuru extends JFrame {
     // ------------------------------------------------------------------
     //  LOAD DATA
     // ------------------------------------------------------------------
-    /** Kelas milik guru (wali kelas / ada di jadwal). Jika tidak ada, tampilkan semua kelas. */
+    /** Kelas milik guru (wali kelas / penugasan mengajar / jadwal). Jika tidak ada, tampilkan semua kelas. */
     private void muatKelas() {
         cmbKelas.removeAllItems();
         if (Session.idGuru == 0) return;
         try (Connection con = Koneksi.getKoneksi()) {
             if (con == null) { UI.koneksiGagal(this); return; }
-            try (PreparedStatement ps = con.prepareStatement(
-                    "SELECT DISTINCT k.id_kelas, k.nama_kelas, k.tingkat FROM tb_kelas k "
-                  + "LEFT JOIN tb_jadwal j ON j.id_kelas = k.id_kelas "
-                  + "WHERE k.id_wali_kelas = ? OR j.id_guru = ? ORDER BY k.tingkat, k.nama_kelas")) {
-                ps.setInt(1, Session.idGuru);
-                ps.setInt(2, Session.idGuru);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) cmbKelas.addItem(new UI.Item(rs.getInt(1), rs.getString(2)));
-                }
-            }
-            if (cmbKelas.getItemCount() == 0) {
-                try (Statement st = con.createStatement();
-                     ResultSet rs = st.executeQuery(
-                         "SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY tingkat, nama_kelas")) {
-                    while (rs.next()) cmbKelas.addItem(new UI.Item(rs.getInt(1), rs.getString(2)));
-                }
-            }
+            for (UI.Item k : Mengajar.kelas(con, Session.idGuru)) cmbKelas.addItem(k);
         } catch (SQLException ex) {
             UI.errorDb(this, ex);
         }

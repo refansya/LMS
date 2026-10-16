@@ -324,30 +324,37 @@ public class FrmMenuGuru extends javax.swing.JFrame {
         idKelasSaya.clear();
         try (PreparedStatement ps = con.prepareStatement(
                 "SELECT k.id_kelas, k.nama_kelas, (k.id_wali_kelas = ?) AS wali, "
-              + "(SELECT COUNT(*) FROM tb_siswa s WHERE s.id_kelas = k.id_kelas) AS jml "
+              + "(SELECT COUNT(*) FROM tb_siswa s WHERE s.id_kelas = k.id_kelas) AS jml, "
+              + "(SELECT GROUP_CONCAT(DISTINCT mp.nama_mapel ORDER BY mp.nama_mapel SEPARATOR ', ') "
+              + " FROM tb_guru_mengajar gm JOIN tb_mapel mp ON gm.id_mapel = mp.id_mapel "
+              + " WHERE gm.id_guru = ? AND gm.id_kelas = k.id_kelas) AS mapel "
               + "FROM tb_kelas k WHERE k.id_wali_kelas = ? "
+              + "OR k.id_kelas IN (SELECT id_kelas FROM tb_guru_mengajar WHERE id_guru = ?) "
               + "OR k.id_kelas IN (SELECT id_kelas FROM tb_jadwal WHERE id_guru = ?) "
               + "OR k.id_kelas IN (SELECT id_kelas FROM tb_tugas WHERE id_guru = ?) "
               + "OR k.id_kelas IN (SELECT id_kelas FROM tb_materi WHERE id_guru = ?) "
               + "OR k.id_kelas IN (SELECT id_kelas FROM tb_kuis WHERE id_guru = ?) "
               + "ORDER BY k.tingkat, k.nama_kelas")) {
-            for (int i = 1; i <= 6; i++) ps.setInt(i, Session.idGuru);
+            for (int i = 1; i <= 8; i++) ps.setInt(i, Session.idGuru);
             StringBuilder sb = new StringBuilder("<html>");
             int n = 0;
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     idKelasSaya.add(rs.getInt("id_kelas"));
                     if (n < 5) {
+                        String mapel = rs.getString("mapel");
+                        String ket = rs.getBoolean("wali") ? "Wali kelas" : "";
+                        if (mapel != null) ket += (ket.isEmpty() ? "" : " | ") + mapel;
+                        if (ket.isEmpty()) ket = "Pengampu";
                         sb.append("&bull; <b>").append(esc(rs.getString("nama_kelas"))).append("</b> - ")
-                          .append(rs.getBoolean("wali") ? "Wali kelas" : "Pengampu")
-                          .append(", ").append(rs.getInt("jml")).append(" siswa<br>");
+                          .append(esc(ket)).append(" (").append(rs.getInt("jml")).append(" siswa)<br>");
                     }
                     n++;
                 }
             }
             if (n == 0) {
                 lblKelasDesc.setText("<html>Belum ada kelas yang terhubung dengan Anda.<br>"
-                    + "Kelas akan muncul setelah Anda menjadi wali kelas atau membuat materi, tugas, atau kuis.</html>");
+                    + "Minta administrator mengatur mata pelajaran dan kelas yang Anda ajar di menu Data Guru.</html>");
             } else {
                 if (n > 5) sb.append("+ ").append(n - 5).append(" kelas lainnya");
                 lblKelasDesc.setText(sb.append("</html>").toString());

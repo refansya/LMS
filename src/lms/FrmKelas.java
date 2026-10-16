@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.Types;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -50,10 +50,22 @@ public class FrmKelas extends JFrame {
         txtTahun.setText(TAHUN_DEFAULT);
 
         cmbWali = new JComboBox<>();
-        UI.combo(panelForm, "Wali Kelas", 220, cmbWali);
+        UI.combo(panelForm, "Wali Kelas (satu guru hanya satu kelas)", 220, cmbWali);
 
-        btnSimpan = UI.tombol(panelForm, "SIMPAN", UI.HIJAU, UI.HIJAU_H, 25, 310, 145, 42, this::aksiSimpan);
-        UI.tombol(panelForm, "BATAL / RESET", UI.ABU, UI.ABU_H, 180, 310, 145, 42, this::resetForm);
+        // daftar wali ikut diperbarui saat tahun ajaran diubah (status "sudah wali" dihitung per tahun ajaran)
+        txtTahun.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override public void focusLost(java.awt.event.FocusEvent e) { muatWali(); }
+        });
+
+        JLabel catatan = new JLabel("<html>Guru yang sudah menjadi wali kelas lain pada tahun ajaran yang sama "
+            + "ditandai \"(sudah wali ...)\" dan tidak bisa dipilih lagi.</html>");
+        catatan.setFont(new java.awt.Font("Segoe UI", java.awt.Font.ITALIC, 11));
+        catatan.setForeground(java.awt.Color.GRAY);
+        catatan.setBounds(25, 270, 300, 40);
+        panelForm.add(catatan);
+
+        btnSimpan = UI.tombol(panelForm, "SIMPAN", UI.HIJAU, UI.HIJAU_H, 25, 330, 145, 42, this::aksiSimpan);
+        UI.tombol(panelForm, "BATAL / RESET", UI.ABU, UI.ABU_H, 180, 330, 145, 42, this::resetForm);
 
         // ---------- TABEL ----------
         RoundedPanel panelTabel = UI.panelTabel(bg, "Daftar Kelas");
@@ -73,17 +85,51 @@ public class FrmKelas extends JFrame {
     }
 
     // ------------------------------------------------------------------
+    /**
+     * Mengisi combo wali kelas. Guru yang sudah menjadi wali kelas LAIN pada tahun ajaran yang sedang
+     * diisi di form diberi keterangan "(sudah wali ...)". Kelas yang sedang diedit tidak dihitung.
+     */
     private void muatWali() {
+        UI.Item lama = (UI.Item) cmbWali.getSelectedItem();
+        int pilih = lama == null ? 0 : lama.id;
+        String tahun = txtTahun.getText().trim();
+
         cmbWali.removeAllItems();
         cmbWali.addItem(new UI.Item(0, "- Belum ditentukan -"));
         try (Connection con = Koneksi.getKoneksi()) {
             if (con == null) return;
-            try (Statement st = con.createStatement();
-                 ResultSet rs = st.executeQuery("SELECT id_guru, nama_guru FROM tb_guru ORDER BY nama_guru")) {
-                while (rs.next()) cmbWali.addItem(new UI.Item(rs.getInt(1), rs.getString(2)));
+            try (PreparedStatement ps = con.prepareStatement(
+                    "SELECT g.id_guru, g.nama_guru, "
+                  + "(SELECT k.nama_kelas FROM tb_kelas k WHERE k.id_wali_kelas = g.id_guru "
+                  + " AND k.tahun_ajaran = ? AND k.id_kelas <> ? LIMIT 1) AS dipakai "
+                  + "FROM tb_guru g ORDER BY g.nama_guru")) {
+                ps.setString(1, tahun);
+                ps.setInt(2, idEdit);
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        String dipakai = rs.getString("dipakai");
+                        cmbWali.addItem(new UI.Item(rs.getInt("id_guru"), rs.getString("nama_guru")
+                            + (dipakai == null ? "" : "  (sudah wali " + dipakai + ")")));
+                    }
+                }
             }
         } catch (SQLException ex) {
             UI.errorDb(this, ex);
+        }
+        UI.pilihItem(cmbWali, pilih);
+    }
+
+    /** Nama kelas lain (pada tahun ajaran yang sama) yang sudah diwalikan guru ini, atau null jika belum. */
+    private String waliTerpakai(Connection con, int idWali, String tahun, int kecualiId) throws SQLException {
+        try (PreparedStatement ps = con.prepareStatement(
+                "SELECT nama_kelas FROM tb_kelas WHERE id_wali_kelas = ? AND tahun_ajaran = ? "
+              + "AND id_kelas <> ? LIMIT 1")) {
+            ps.setInt(1, idWali);
+            ps.setString(2, tahun);
+            ps.setInt(3, kecualiId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
         }
     }
 
@@ -116,8 +162,9 @@ public class FrmKelas extends JFrame {
         txtNama.setText("");
         txtTahun.setText(TAHUN_DEFAULT);
         cmbTingkat.setSelectedIndex(0);
-        cmbWali.setSelectedIndex(0);
         idEdit = 0;
+        muatWali();
+        cmbWali.setSelectedIndex(0);
         lblFormTitle.setText("Form Input Kelas");
         btnSimpan.setText("SIMPAN");
         tabel.clearSelection();
@@ -130,6 +177,7 @@ public class FrmKelas extends JFrame {
             JOptionPane.showMessageDialog(this, "Pilih dulu kelas yang ingin diubah di tabel.");
             return;
         }
+        int idWali = 0;
         try (Connection con = Koneksi.getKoneksi()) {
             if (con == null) { UI.koneksiGagal(this); return; }
             try (PreparedStatement ps = con.prepareStatement(
@@ -140,10 +188,12 @@ public class FrmKelas extends JFrame {
                     txtNama.setText(rs.getString("nama_kelas"));
                     cmbTingkat.setSelectedItem(rs.getString("tingkat"));
                     txtTahun.setText(rs.getString("tahun_ajaran") == null ? "" : rs.getString("tahun_ajaran"));
-                    UI.pilihItem(cmbWali, rs.getInt("id_wali_kelas")); // 0 jika NULL
+                    idWali = rs.getInt("id_wali_kelas"); // 0 jika NULL
                 }
             }
             idEdit = id;
+            muatWali();                 // setelah idEdit diisi, kelas ini tidak dihitung sebagai "sudah wali"
+            UI.pilihItem(cmbWali, idWali);
             lblFormTitle.setText("Edit Data Kelas");
             btnSimpan.setText("UPDATE");
         } catch (SQLException ex) {
@@ -180,7 +230,8 @@ public class FrmKelas extends JFrame {
         String nama = txtNama.getText().trim();
         String tingkat = cmbTingkat.getSelectedItem().toString();
         String tahun = txtTahun.getText().trim();
-        int idWali = ((UI.Item) cmbWali.getSelectedItem()).id;
+        UI.Item wali = (UI.Item) cmbWali.getSelectedItem();
+        int idWali = wali == null ? 0 : wali.id;
 
         String sql = (idEdit == 0)
             ? "INSERT INTO tb_kelas (nama_kelas, tingkat, tahun_ajaran, id_wali_kelas) VALUES (?,?,?,?)"
@@ -192,6 +243,16 @@ public class FrmKelas extends JFrame {
             if (sudahAda(con, nama, tahun, idEdit)) {
                 UI.peringatan(this, "Kelas \"" + nama + "\" untuk tahun ajaran " + tahun + " sudah ada.");
                 return;
+            }
+            if (idWali != 0) {
+                String kelasLain = waliTerpakai(con, idWali, tahun, idEdit);
+                if (kelasLain != null) {
+                    String namaGuru = wali.label.replaceAll("\\s+\\(sudah wali.*\\)$", "");
+                    UI.peringatan(this, namaGuru + " sudah menjadi wali kelas " + kelasLain
+                        + " pada tahun ajaran " + tahun + ".\nSatu guru hanya boleh menjadi wali satu kelas.\n"
+                        + "Pilih guru lain atau kosongkan dulu wali di kelas " + kelasLain + ".");
+                    return;
+                }
             }
             try (PreparedStatement ps = con.prepareStatement(sql)) {
                 ps.setString(1, nama);
@@ -205,6 +266,9 @@ public class FrmKelas extends JFrame {
                 ? "Kelas berhasil ditambahkan." : "Data kelas berhasil diperbarui.");
             resetForm();
             muatTabel();
+        } catch (SQLIntegrityConstraintViolationException dup) {
+            UI.peringatan(this, "Data tidak bisa disimpan: nama kelas atau wali kelas ini sudah dipakai "
+                + "pada tahun ajaran " + tahun + ".");
         } catch (SQLException ex) {
             UI.errorDb(this, ex);
         }
@@ -221,7 +285,7 @@ public class FrmKelas extends JFrame {
         if (!UI.konfirmasiHapus(this,
                 "Hapus kelas \"" + nama + "\"?\n\n"
               + "Siswa di kelas ini (" + jml + " siswa) TIDAK dihapus, hanya kelasnya dikosongkan.\n"
-              + "Jadwal, materi, tugas, dan kuis milik kelas ini ikut terhapus.\n"
+              + "Jadwal, penugasan mengajar, materi, tugas, dan kuis milik kelas ini ikut terhapus.\n"
               + "Tindakan ini tidak bisa dibatalkan.")) return;
 
         try (Connection con = Koneksi.getKoneksi()) {

@@ -408,31 +408,8 @@ public class FrmKuisGuru extends JFrame {
         }
 
         private void muatPilihan() {
-            cmbMapel.removeAllItems();
-            cmbMapel.addItem(new UI.Item(0, "- Pilih mata pelajaran -"));
-            cmbKelas.removeAllItems();
-            cmbKelas.addItem(new UI.Item(0, "- Pilih kelas -"));
-            int mapelGuru = 0;
-            try (Connection con = Koneksi.getKoneksi()) {
-                if (con == null) { UI.koneksiGagal(this); return; }
-                try (Statement st = con.createStatement()) {
-                    try (ResultSet rs = st.executeQuery("SELECT id_mapel, nama_mapel FROM tb_mapel ORDER BY nama_mapel")) {
-                        while (rs.next()) cmbMapel.addItem(new UI.Item(rs.getInt(1), rs.getString(2)));
-                    }
-                    try (ResultSet rs = st.executeQuery("SELECT id_kelas, nama_kelas FROM tb_kelas ORDER BY tingkat, nama_kelas")) {
-                        while (rs.next()) cmbKelas.addItem(new UI.Item(rs.getInt(1), rs.getString(2)));
-                    }
-                }
-                try (PreparedStatement ps = con.prepareStatement("SELECT id_mapel FROM tb_guru WHERE id_guru=?")) {
-                    ps.setInt(1, Session.idGuru);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (rs.next()) mapelGuru = rs.getInt(1); // 0 jika NULL
-                    }
-                }
-            } catch (SQLException ex) {
-                UI.errorDb(this, ex);
-            }
-            UI.pilihItem(cmbMapel, mapelGuru);
+            // kelas milik guru; mapel menyesuaikan kelas yang dipilih
+            Mengajar.pasang(this, cmbKelas, cmbMapel, true);
         }
 
         private void muatData() {
@@ -452,8 +429,8 @@ public class FrmKuisGuru extends JFrame {
                         txtMulai.setText(rs.getString("mulai") == null ? "" : rs.getString("mulai"));
                         txtSelesai.setText(rs.getString("selesai") == null ? "" : rs.getString("selesai"));
                         txtDesk.setText(rs.getString("deskripsi") == null ? "" : rs.getString("deskripsi"));
+                        UI.pilihItem(cmbKelas, rs.getInt("id_kelas")); // kelas dulu, karena daftar mapel mengikuti kelas
                         UI.pilihItem(cmbMapel, rs.getInt("id_mapel"));
-                        UI.pilihItem(cmbKelas, rs.getInt("id_kelas"));
                     }
                 }
             } catch (SQLException ex) {
